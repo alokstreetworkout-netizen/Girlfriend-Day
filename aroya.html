@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>AROYA — Every story begins somewhere</title>
+
+<!--
+  ============================================================================
+  PROJECT AROYA — "Mobile Cinematic Love Experience"
+  ----------------------------------------------------------------------------
+  This file is Chapter One only: THE SUNFLOWER FIELD.
+  It is built so future chapters (rain, sky/aviation, the reveal) can be
+  appended as new <section class="scene" data-scene="..."> blocks further
+  down this file, each with its own ScrollTrigger. Search this file for
+  "FUTURE SCENE" to find every extension point.
+
+  Stack: HTML + CSS + vanilla JS + GSAP + ScrollTrigger only.
+  ============================================================================
+-->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500;1,600&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+
+<style>
+  /* ==========================================================================
+     TOKENS — palette, type, timing. Change the story's mood from right here.
+  ========================================================================== */
+  :root{
+    /* golden-hour sky, top → horizon */
+    --sky-1:#FFF3D6;
+    --sky-2:#FFCE7C;
+    --sky-3:#F79A56;
+    --sky-4:#E6704F;
+
+    /* flora */
+    --petal-hi:#FFE9A8;
+    --petal:#F4C542;
+    --petal-deep:#DD9F2C;
+    --seed-hi:#7A4A28;
+    --seed:#5B3A22;
+    --seed-deep:#3A2314;
+    --stem-hi:#6B9950;
+    --stem:#3E5F30;
+
+    /* light / atmosphere */
+    --cream:#FFF8E9;
+    --white-fade:#FFFCF6;
+    --ink:#241A10;
+
+    --ease-cine: cubic-bezier(.22,.61,.36,1);
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{
+    margin:0; padding:0; width:100%;
+    background:var(--ink);
+    overflow-x:hidden;
+    touch-action:pan-y;
+    -webkit-tap-highlight-color:transparent;
+  }
+  body{
+    font-family:'Jost', sans-serif;
+    color:var(--cream);
+  }
+  .serif{ font-family:'Cormorant Garamond', serif; font-style:italic; }
+
+  ::selection{ background:var(--petal); color:var(--ink); }
+
+  /* ==========================================================================
+     PIN TARGET — the single "world" the camera glides through.
+  ========================================================================== */
+  #pinTarget{
+    position:relative;
+    width:100%;
+    height:100svh;
+    overflow:hidden;
+    background:linear-gradient(to bottom,
+      var(--sky-1) 0%, var(--sky-2) 42%, var(--sky-3) 70%, var(--sky-4) 100%);
+  }
+
+  /* soft sun glow, top-right, hazy golden-hour source of light */
+  .sun-glow{
+    position:absolute; top:8%; right:10%;
+    width:46vw; height:46vw; max-width:260px; max-height:260px;
+    border-radius:50%;
+    background:radial-gradient(circle, rgba(255,246,214,.95) 0%, rgba(255,214,140,.55) 40%, rgba(255,214,140,0) 72%);
+    filter:blur(2px);
+    pointer-events:none;
+    will-change:transform, opacity;
+  }
+
+  /* ---- clouds --------------------------------------------------------- */
+  .clouds{ position:absolute; inset:0; overflow:hidden; pointer-events:none; }
+  .cloud{
+    position:absolute;
+    background:#fff;
+    border-radius:50%;
+    opacity:.8;
+    filter:blur(1.5px);
+  }
+  .cloud::before, .cloud::after{
+    content:''; position:absolute; background:inherit; border-radius:50%;
+  }
+  .cloud.c1{ width:110px; height:34px; top:10%; left:-30%; animation:drift 46s linear infinite; }
+  .cloud.c1::before{ width:60px; height:60px; top:-26px; left:12px; }
+  .cloud.c1::after{ width:44px; height:44px; top:-12px; right:8px; }
+
+  .cloud.c2{ width:150px; height:42px; top:18%; left:-45%; opacity:.65; animation:drift 68s linear infinite; animation-delay:-20s; }
+  .cloud.c2::before{ width:76px; height:76px; top:-30px; left:20px; }
+  .cloud.c2::after{ width:56px; height:56px; top:-14px; right:14px; }
+
+  .cloud.c3{ width:90px; height:28px; top:6%; left:-60%; opacity:.55; animation:drift 90s linear infinite; animation-delay:-40s; }
+  .cloud.c3::before{ width:48px; height:48px; top:-20px; left:10px; }
+  .cloud.c3::after{ width:36px; height:36px; top:-10px; right:6px; }
+
+  @keyframes drift{ from{ transform:translateX(0); } to{ transform:translateX(180vw); } }
+
+  /* ---- butterflies ------------------------------------------------------ */
+  .butterfly{ position:absolute; width:18px; height:14px; top:35%; left:-8%; opacity:0; pointer-events:none; }
+  .butterfly .wing{ position:absolute; width:9px; height:13px; top:0; background:var(--petal-deep); border-radius:50% 50% 50% 4%; }
+  .butterfly .wing.l{ left:0; transform-origin:right center; animation:flap .32s ease-in-out infinite alternate; }
+  .butterfly .wing.r{ right:0; transform-origin:left center; transform:scaleX(-1); animation:flap .32s ease-in-out infinite alternate-reverse; }
+  @keyframes flap{ 0%{ transform:scaleY(1) scaleX(1); } 100%{ transform:scaleY(.45) scaleX(1); } }
+  .butterfly .wing.r{ transform:scaleX(-1) scaleY(1); }
+
+  /* ---- pollen ------------------------------------------------------------ */
+  .pollen-layer{ position:absolute; inset:0; pointer-events:none; }
+  .pollen{
+    position:absolute; width:4px; height:4px; border-radius:50%;
+    background:radial-gradient(circle, #fff6d8 0%, rgba(255,246,216,0) 75%);
+    opacity:0;
+  }
+
+  /* ---- field layers (parallax depth) -------------------------------------- */
+  .field-layer{ position:absolute; left:0; right:0; bottom:0; height:62%; pointer-events:none; will-change:transform, filter; }
+  .field-back{  height:46%; filter:blur(2.5px) saturate(.82) brightness(.94); z-index:2; }
+  .field-mid{   height:56%; filter:saturate(1) brightness(1); z-index:3; }
+  .field-front{ height:70%; filter:saturate(1.12) brightness(1.05); z-index:4; }
+
+  .flower{
+    position:absolute; bottom:-4%;
+    left:var(--x);
+    width:calc(70px * var(--scale));
+    transform-origin:bottom center;
+    animation:sway var(--sway-dur) ease-in-out infinite;
+    animation-delay:var(--sway-delay);
+  }
+  .flower-svg{ width:100%; height:auto; display:block; overflow:visible; }
+  @keyframes sway{
+    0%,100%{ transform:rotate(-2.6deg) rotate3d(0,1,0,0deg); }
+    50%{ transform:rotate(2.6deg); }
+  }
+
+  /* falling petals — brought to life only during the scroll-glide */
+  .petals-layer{ position:absolute; inset:0; opacity:0; pointer-events:none; z-index:5; }
+  .petal-fx{
+    position:absolute; top:-6%; width:10px; height:14px;
+    background:linear-gradient(var(--petal-hi), var(--petal-deep));
+    border-radius:60% 60% 60% 0%;
+    animation:fall linear infinite;
+  }
+  @keyframes fall{
+    0%{ transform:translate(0,0) rotate(0deg); }
+    100%{ transform:translate(var(--drift,40px), 130vh) rotate(340deg); }
+  }
+
+  /* ---- foreground vignette + text layer -------------------------------- */
+  .vignette{
+    position:absolute; inset:0; z-index:6; pointer-events:none;
+    background:radial-gradient(ellipse at 50% 55%, rgba(0,0,0,0) 45%, rgba(20,12,4,.45) 100%);
+  }
+
+  .overlay-text{
+    position:absolute; left:0; right:0; top:38%;
+    z-index:7; text-align:center; padding:0 12%;
+    pointer-events:none;
+  }
+  .line-fade{
+    margin:0; opacity:0; transform:translateY(14px);
+    font-size:clamp(1.3rem, 5.6vw, 2rem);
+    letter-spacing:.02em;
+    color:var(--cream);
+    text-shadow:0 2px 18px rgba(60,30,0,.35);
+  }
+
+  .swipe-indicator{
+    position:absolute; bottom:6%; left:0; right:0; z-index:7;
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+    opacity:0; pointer-events:none;
+  }
+  .swipe-indicator span{
+    font-size:.68rem; letter-spacing:.32em; text-transform:uppercase; color:var(--cream);
+    opacity:.85;
+  }
+  .swipe-indicator .arrow{
+    width:14px; height:14px; border-right:1.5px solid var(--cream); border-bottom:1.5px solid var(--cream);
+    transform:rotate(45deg);
+    animation:bob 1.8s ease-in-out infinite;
+    opacity:.85;
+  }
+  @keyframes bob{ 0%,100%{ transform:rotate(45deg) translate(0,0); } 50%{ transform:rotate(45deg) translate(4px,4px); } }
+
+  /* ---- the fade to white + end caption, scrubbed by scroll ---------------- */
+  .fade-to-white{
+    position:absolute; inset:0; z-index:8; background:var(--white-fade);
+    opacity:0; pointer-events:none;
+  }
+  .end-caption{
+    position:absolute; inset:0; z-index:9; display:flex; align-items:center; justify-content:center;
+    opacity:0; pointer-events:none;
+  }
+  .end-caption span{
+    font-size:clamp(1.6rem, 7vw, 2.6rem);
+    color:var(--ink);
+    letter-spacing:.04em;
+  }
+
+  /* ==========================================================================
+     SCROLL SPACER — its scroll distance IS the length of the camera's glide.
+  ========================================================================== */
+  #scrollSpace{ height:380vh; }
+
+  /* ==========================================================================
+     CHAPTER TWO — THE RAIN
+     Symbolism: the storms every couple weathers. Two shapes, one umbrella,
+     lightning that never quite breaks them apart, and a slow clearing into
+     dawn — arriving exactly on the date they chose each other.
+  ========================================================================== */
+  #pinTarget2{
+    position:relative; width:100%; height:100svh; overflow:hidden;
+    background:linear-gradient(to bottom, #2B3A4A 0%, #3C4F63 40%, #55697C 75%, #6E7F8F 100%);
+  }
+  .rain-layer{ position:absolute; inset:0; overflow:hidden; pointer-events:none; z-index:2; }
+  .raindrop{
+    position:absolute; top:-10%; width:1.5px; height:26px;
+    background:linear-gradient(to bottom, rgba(230,240,255,0), rgba(230,240,255,.55));
+    animation:rainfall linear infinite;
+  }
+  @keyframes rainfall{ 0%{ transform:translateY(0); } 100%{ transform:translateY(120vh); } }
+
+  .lightning{ position:absolute; inset:0; background:#EAF2FF; opacity:0; pointer-events:none; z-index:3; }
+
+  .ground{
+    position:absolute; left:0; right:0; bottom:0; height:20%; z-index:2;
+    background:linear-gradient(to bottom, #1D2733, #0F151C);
+  }
+  .puddle-shine{
+    position:absolute; left:0; right:0; bottom:14%; height:2px; z-index:3;
+    background:rgba(220,235,255,.25); filter:blur(1px);
+  }
+
+  .together{ position:absolute; left:50%; bottom:19%; z-index:4; transform:translateX(-50%); }
+  .figure{ position:absolute; bottom:0; width:15px; height:56px; border-radius:8px 8px 3px 3px; background:#161D26; }
+  .figure.a{ left:-13px; }
+  .figure.b{ left:2px; height:52px; }
+  .umbrella{ position:absolute; bottom:44px; left:-30px; width:74px; }
+  .umbrella svg{ width:100%; height:auto; display:block; }
+
+  .rain-text{
+    position:absolute; left:0; right:0; top:30%; z-index:5;
+    text-align:center; padding:0 11%; pointer-events:none;
+  }
+  .rain-text p{
+    margin:0; opacity:0; transform:translateY(14px);
+    font-size:clamp(1.1rem, 5vw, 1.55rem); letter-spacing:.01em;
+    color:#F4F8FF; text-shadow:0 2px 16px rgba(0,0,0,.35);
+    position:absolute; left:11%; right:11%; top:0;
+  }
+
+  .dawn-wash{ position:absolute; inset:0; z-index:6; pointer-events:none; opacity:0;
+    background:linear-gradient(to bottom, #FFE7BE 0%, #FFC98C 45%, #F49B6B 100%); }
+  .date-mark{
+    position:absolute; inset:0; z-index:7; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; opacity:0; pointer-events:none;
+  }
+  .date-mark .num{ font-size:clamp(2rem, 9vw, 3.2rem); color:var(--ink); letter-spacing:.06em; }
+  .date-mark .cap{ margin-top:8px; font-size:.75rem; letter-spacing:.34em; text-transform:uppercase; color:var(--ink); opacity:.75; }
+
+  #scrollSpace2{ height:420vh; }
+
+  /* ==========================================================================
+     CHAPTER THREE — THE SKY
+     Symbolism: Priya's dream of flight. The storm's ceiling breaks open,
+     light returns, and something small and paper-thin learns to climb.
+  ========================================================================== */
+  #pinTarget3{
+    position:relative; width:100%; height:100svh; overflow:hidden;
+    background:linear-gradient(to bottom, #A9D6F5 0%, #CFE9FA 45%, #F3F8FC 100%);
+  }
+  .sky-clouds{ position:absolute; inset:0; overflow:hidden; pointer-events:none; z-index:2; }
+  .sky-cloud{ position:absolute; background:#fff; border-radius:50%; opacity:.9; filter:blur(1px); }
+  .sky-cloud::before, .sky-cloud::after{ content:''; position:absolute; background:inherit; border-radius:50%; }
+
+  .sunrays{
+    position:absolute; top:-10%; left:50%; width:220vw; height:140%; z-index:1;
+    transform:translateX(-50%);
+    background:conic-gradient(from 200deg at 50% 0%,
+      rgba(255,255,255,0) 0deg, rgba(255,250,230,.35) 6deg, rgba(255,255,255,0) 14deg,
+      rgba(255,255,255,0) 40deg, rgba(255,250,230,.3) 47deg, rgba(255,255,255,0) 55deg,
+      rgba(255,255,255,0) 90deg);
+    opacity:0; pointer-events:none;
+  }
+
+  .paper-plane{ position:absolute; width:30px; z-index:4; opacity:0; }
+  .paper-plane svg{ width:100%; height:auto; display:block; }
+
+  .sky-text{
+    position:absolute; left:0; right:0; top:34%; z-index:5;
+    text-align:center; padding:0 11%; pointer-events:none;
+  }
+  .sky-text p{
+    margin:0; opacity:0; transform:translateY(14px);
+    font-size:clamp(1.15rem, 5.2vw, 1.65rem); letter-spacing:.01em;
+    color:#243447; position:absolute; left:11%; right:11%; top:0;
+  }
+
+  #scrollSpace3{ height:340vh; }
+
+  /* ==========================================================================
+     CHAPTER FOUR — THE REVEAL
+     Symbolism: the sunflower (beginning) and the plane (her sky) meet in
+     one mark. Not a headline. A signature.
+  ========================================================================== */
+  #sceneFour{
+    position:relative; width:100%; height:100svh; overflow:hidden;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background:linear-gradient(to bottom, #FFF6E6 0%, #FFE3B8 55%, #F7C68B 100%);
+    text-align:center; padding:0 10%;
+  }
+  .emblem{ width:64px; opacity:0; transform:translateY(10px) scale(.9); margin-bottom:22px; }
+  .emblem svg{ width:100%; height:auto; display:block; }
+  .wordmark{
+    font-family:'Cormorant Garamond', serif; font-style:italic; font-weight:500;
+    font-size:clamp(2.4rem, 12vw, 4rem); color:var(--ink);
+    letter-spacing:.03em; opacity:0; transform:translateY(10px);
+  }
+  .wordmark-sub{
+    margin-top:14px; font-family:'Jost', sans-serif; font-size:.78rem;
+    letter-spacing:.28em; text-transform:uppercase; color:var(--ink); opacity:0;
+  }
+  .signature-line{
+    margin-top:34px; max-width:320px; font-family:'Cormorant Garamond', serif;
+    font-style:italic; font-size:clamp(1rem, 4.4vw, 1.2rem); color:var(--ink);
+    opacity:0; line-height:1.55;
+  }
+
+  /* ---- accessibility: respect reduced motion ----------------------------- */
+  @media (prefers-reduced-motion: reduce){
+    .flower, .cloud, .butterfly .wing, .swipe-indicator .arrow, .petal-fx,
+    .raindrop, .sky-cloud{
+      animation:none !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- Shared SVG sprite: one hand-drawn sunflower, reused via <use> for perf -->
+<svg style="position:absolute;width:0;height:0" aria-hidden="true" focusable="false">
+  <defs>
+    <linearGradient id="petalGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="var(--petal-hi)"/>
+      <stop offset="55%" stop-color="var(--petal)"/>
+      <stop offset="100%" stop-color="var(--petal-deep)"/>
+    </linearGradient>
+    <radialGradient id="seedGrad" cx="35%" cy="30%" r="75%">
+      <stop offset="0%" stop-color="var(--seed-hi)"/>
+      <stop offset="70%" stop-color="var(--seed)"/>
+      <stop offset="100%" stop-color="var(--seed-deep)"/>
+    </radialGradient>
+    <linearGradient id="stemGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="var(--stem-hi)"/>
+      <stop offset="100%" stop-color="var(--stem)"/>
+    </linearGradient>
+  </defs>
+  <symbol id="sunflower" viewBox="0 0 100 150">
+    <path d="M50 68 C 38 88, 62 108, 50 150" stroke="url(#stemGrad)" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <ellipse cx="34" cy="98" rx="15" ry="6.5" fill="var(--stem)" transform="rotate(-25 34 98)"/>
+    <ellipse cx="66" cy="116" rx="15" ry="6.5" fill="var(--stem)" transform="rotate(22 66 116)"/>
+    <g>
+      <g transform="rotate(0 50 55)"><ellipse cx="50" cy="24" rx="8" ry="19" fill="url(#petalGrad)"/></g>
+      <g transform="rotate(36 50 55)"><ellipse cx="50" cy="24" rx="8" ry="19" fill="url(#petalGrad)"/></g>
+      <g transform="rotate(72 50 55)"><ellipse cx="50" cy="24" rx="8" ry="19" fill="url(#petalGrad)"/></g>
+      <g transform="rotate(108 50 55)"><ellipse cx="50" cy="24" rx="8" ry="19" fill="url(#petalGrad)"/></g>
+      <g transform="rotate(144 50 55)"><ellipse cx="50" cy="24" rx="8" ry="19" fill="url(#petalGrad)"/></g>
+      <g transform="rotate(180 50 55)"><ellipse cx="50" cy="24" rx="8" ry="19" fill="url(#petalGrad)"/></g>
+      <g transform="rotate(216 50 55)"><ellipse cx="50" cy="24" rx="8" ry="19" fill="url(#petalGrad)"/></g>
+      <g transform="rotate(252 50 55)"><ellipse cx="50" cy="24" rx="8" ry="19" fill="url(#petalGrad)"/></g>
+      <g transform="rotate(288 50 55)"><ellipse cx="50" cy="24" rx="8" ry="19" fill="url(#petalGrad)"/></g>
+      <g transform="rotate(324 50 55)"><ellipse cx="50" cy="24" rx="8" ry="19" fill="url(#petalGrad)"/></g>
+    </g>
+    <circle cx="50" cy="55" r="17" fill="url(#seedGrad)"/>
+  </symbol>
+</svg>
+
+<div id="pinTarget">
+  <div class="sun-glow" id="sunGlow"></div>
+
+  <div class="clouds">
+    <div class="cloud c1"></div>
+    <div class="cloud c2"></div>
+    <div class="cloud c3"></div>
+  </div>
+
+  <div class="butterflies">
+    <div class="butterfly" id="bf1"><span class="wing l"></span><span class="wing r"></span></div>
+    <div class="butterfly" id="bf2"><span class="wing l"></span><span class="wing r"></span></div>
+  </div>
+
+  <div class="pollen-layer" id="pollenLayer"></div>
+
+  <div class="field-layer field-back"  id="fieldBack"></div>
+  <div class="field-layer field-mid"   id="fieldMid"></div>
+  <div class="field-layer field-front" id="fieldFront"></div>
+
+  <div class="petals-layer" id="petalsLayer"></div>
+
+  <div class="vignette" id="vignette"></div>
+
+  <div class="overlay-text">
+    <p class="line-fade serif" id="introLine">Every story begins somewhere&hellip;</p>
+  </div>
+
+  <div class="swipe-indicator" id="swipeIndicator">
+    <span class="arrow"></span>
+    <span>Swipe</span>
+  </div>
+
+  <div class="fade-to-white" id="fadeWhite"></div>
+  <div class="end-caption" id="endCaption"><span class="serif">Summer 2025</span></div>
+</div>
+
+<!-- The length of this spacer is the length of the camera's glide through the field -->
+<div id="scrollSpace"></div>
+
+<!-- ============================================================
+     CHAPTER TWO — THE RAIN
+     A mathematics class. A search that took too long. A friendship
+     that became something more before it had a name. And the storms
+     that came after — survived, always, together.
+============================================================= -->
+<div id="pinTarget2">
+  <div class="rain-layer" id="rainLayer"></div>
+  <div class="lightning" id="lightning"></div>
+  <div class="ground"></div>
+  <div class="puddle-shine"></div>
+
+  <div class="together">
+    <div class="figure a"></div>
+    <div class="figure b"></div>
+    <div class="umbrella">
+      <svg viewBox="0 0 74 40"><path d="M2 34 C 2 14, 72 14, 72 34" stroke="#0F151C" stroke-width="3" fill="none" stroke-linecap="round"/><line x1="37" y1="22" x2="37" y2="44" stroke="#0F151C" stroke-width="2.5"/></svg>
+    </div>
+  </div>
+
+  <div class="rain-text" id="rainText">
+    <p id="rt1">A mathematics class, after summer vacation.</p>
+    <p id="rt2">He kept looking for her, quietly, again and again.</p>
+    <p id="rt3">Too many people shared her name — it took a while to find her.</p>
+    <p id="rt4">Somewhere in between, friendship became something more.</p>
+    <p id="rt5">Every storm since, they've stood under one umbrella.</p>
+  </div>
+
+  <div class="dawn-wash" id="dawnWash"></div>
+  <div class="date-mark" id="dateMark">
+    <span class="num serif">16 . 11 . 2025</span>
+    <span class="cap">They chose each other</span>
+  </div>
+</div>
+<div id="scrollSpace2"></div>
+
+<!-- ============================================================
+     CHAPTER THREE — THE SKY
+     Priya's dream lives up here. The storm's ceiling opens, and
+     something small and paper-thin learns to climb toward it.
+============================================================= -->
+<div id="pinTarget3">
+  <div class="sunrays" id="sunrays"></div>
+  <div class="sky-clouds" id="skyClouds"></div>
+  <div class="paper-plane" id="paperPlane">
+    <svg viewBox="0 0 100 100"><path d="M6 52 L94 8 L64 92 L48 58 L6 52 Z" fill="#FBFDFF" stroke="#C7DCEC" stroke-width="2" stroke-linejoin="round"/><path d="M48 58 L94 8 L48 58Z" fill="#E7F1FA"/></svg>
+  </div>
+  <div class="sky-text" id="skyText">
+    <p id="st1">She dreams of the sky.</p>
+    <p id="st2">Somewhere up there, she's already flying.</p>
+  </div>
+</div>
+<div id="scrollSpace3"></div>
+
+<!-- ============================================================
+     CHAPTER FOUR — THE REVEAL
+     The sunflower and the sky, in one mark. Not a headline — a
+     signature.
+============================================================= -->
+<div id="sceneFour">
+  <div class="emblem">
+    <svg viewBox="0 0 100 100"><circle cx="50" cy="55" r="15" fill="url(#seedGrad)"/><g><g transform="rotate(0 50 55)"><ellipse cx="50" cy="30" rx="7" ry="16" fill="url(#petalGrad)"/></g><g transform="rotate(51 50 55)"><ellipse cx="50" cy="30" rx="7" ry="16" fill="url(#petalGrad)"/></g><g transform="rotate(102 50 55)"><ellipse cx="50" cy="30" rx="7" ry="16" fill="url(#petalGrad)"/></g><g transform="rotate(153 50 55)"><ellipse cx="50" cy="30" rx="7" ry="16" fill="url(#petalGrad)"/></g><g transform="rotate(204 50 55)"><ellipse cx="50" cy="30" rx="7" ry="16" fill="url(#petalGrad)"/></g><g transform="rotate(255 50 55)"><ellipse cx="50" cy="30" rx="7" ry="16" fill="url(#petalGrad)"/></g><g transform="rotate(306 50 55)"><ellipse cx="50" cy="30" rx="7" ry="16" fill="url(#petalGrad)"/></g></g><path d="M62 42 L92 18" stroke="var(--ink)" stroke-width="2" stroke-linecap="round" opacity=".55"/></svg>
+  </div>
+  <div class="wordmark" id="wordmarkMain">AROYA</div>
+  <div class="wordmark-sub" id="wordmarkSub">Alok &amp; Priya</div>
+  <p class="signature-line" id="signatureLine">Every story begins somewhere.<br>Theirs began in a sunflower field, and is still being written.</p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script>
+(function AROYA(){
+  'use strict';
+  gsap.registerPlugin(ScrollTrigger);
+
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ------------------------------------------------------------------------
+     1. SEED THE FIELD — populate the three depth layers with sunflowers.
+     Each flower is a <div> (for transform/animation) wrapping an <svg><use>
+     of the single shared sprite, so we pay the drawing cost once.
+  ------------------------------------------------------------------------ */
+  function seedField(layerEl, count, opts){
+    var frag = document.createDocumentFragment();
+    for (var i = 0; i < count; i++){
+      var scale = opts.scaleMin + Math.random() * (opts.scaleMax - opts.scaleMin);
+      var swayDur = (opts.swayMin + Math.random() * (opts.swayMax - opts.swayMin)).toFixed(2);
+      var swayDelay = (-Math.random() * swayDur).toFixed(2);
+
+      var d = document.createElement('div');
+      d.className = 'flower';
+      d.style.setProperty('--x', (Math.random() * 100).toFixed(1) + '%');
+      d.style.setProperty('--scale', scale.toFixed(2));
+      d.style.setProperty('--sway-dur', swayDur + 's');
+      d.style.setProperty('--sway-delay', swayDelay + 's');
+      d.style.zIndex = Math.round(scale * 10);
+      d.innerHTML = '<svg viewBox="0 0 100 150" class="flower-svg"><use href="#sunflower"></use></svg>';
+      frag.appendChild(d);
+    }
+    layerEl.appendChild(frag);
+  }
+
+  seedField(document.getElementById('fieldBack'),  16, { scaleMin:.32, scaleMax:.5,  swayMin:5, swayMax:8 });
+  seedField(document.getElementById('fieldMid'),   11, { scaleMin:.58, scaleMax:.82, swayMin:4, swayMax:6.5 });
+  seedField(document.getElementById('fieldFront'),  6, { scaleMin:1.0, scaleMax:1.55, swayMin:3, swayMax:5 });
+
+  /* ------------------------------------------------------------------------
+     2. POLLEN — small warm motes drifting upward through the light.
+  ------------------------------------------------------------------------ */
+  (function seedPollen(){
+    var layer = document.getElementById('pollenLayer');
+    var count = reduceMotion ? 0 : 18;
+    for (var i = 0; i < count; i++){
+      var p = document.createElement('div');
+      p.className = 'pollen';
+      layer.appendChild(p);
+
+      var dur = gsap.utils.random(9, 17);
+      var startX = Math.random() * 100;
+      gsap.set(p, { left: startX + '%', top: '108%', opacity: 0 });
+
+      gsap.to(p, {
+        top: '-8%',
+        x: '+=' + gsap.utils.random(-50, 50),
+        duration: dur,
+        ease: 'none',
+        repeat: -1,
+        delay: gsap.utils.random(0, 10),
+        onRepeat: function(el){ return function(){ gsap.set(el, { left: Math.random() * 100 + '%', x: 0 }); }; }(p)
+      });
+      gsap.to(p, {
+        opacity: 1,
+        duration: dur * 0.35,
+        yoyo: true,
+        repeat: -1,
+        repeatDelay: dur * 0.3,
+        ease: 'sine.inOut',
+        delay: gsap.utils.random(0, 10)
+      });
+    }
+  })();
+
+  /* ------------------------------------------------------------------------
+     3. BUTTERFLIES — occasional visitors, not a constant presence.
+  ------------------------------------------------------------------------ */
+  function flyButterfly(el){
+    if (reduceMotion) return;
+    var startTop = gsap.utils.random(28, 55);
+    gsap.set(el, { top: startTop + '%', left: '-8%', opacity: 1 });
+    gsap.to(el, {
+      left: '112%',
+      top: '+=' + gsap.utils.random(-14, 14),
+      duration: gsap.utils.random(9, 15),
+      ease: 'sine.inOut',
+      onComplete: function(){
+        gsap.set(el, { opacity: 0 });
+        gsap.delayedCall(gsap.utils.random(4, 10), function(){ flyButterfly(el); });
+      }
+    });
+  }
+  flyButterfly(document.getElementById('bf1'));
+  gsap.delayedCall(6, function(){ flyButterfly(document.getElementById('bf2')); });
+
+  /* ------------------------------------------------------------------------
+     4. FALLING PETALS — spawned once, quietly reused during the glide.
+  ------------------------------------------------------------------------ */
+  (function seedPetals(){
+    var layer = document.getElementById('petalsLayer');
+    for (var i = 0; i < 10; i++){
+      var pt = document.createElement('div');
+      pt.className = 'petal-fx';
+      pt.style.left = (Math.random() * 100) + '%';
+      pt.style.setProperty('--drift', gsap.utils.random(-60, 60) + 'px');
+      pt.style.animationDuration = gsap.utils.random(3.5, 6) + 's';
+      pt.style.animationDelay = gsap.utils.random(0, 5) + 's';
+      layer.appendChild(pt);
+    }
+  })();
+
+  /* ------------------------------------------------------------------------
+     5. OPENING BEAT — the field breathes for a few seconds before any text.
+  ------------------------------------------------------------------------ */
+  var introTl = gsap.timeline({ delay: 1.6 });
+  introTl
+    .to('#introLine', { opacity: 1, y: 0, duration: 2, ease: 'power2.out' })
+    .to('#swipeIndicator', { opacity: 1, duration: 1.2, ease: 'power1.out' }, '+=0.8');
+
+  /* ------------------------------------------------------------------------
+     6. THE CAMERA GLIDE — one scrubbed timeline drives the entire journey
+     through the field: near flowers rush past, far flowers drift slowly,
+     petals fly, light intensifies, and the world dissolves to white.
+  ------------------------------------------------------------------------ */
+  var glide = gsap.timeline({
+    scrollTrigger: {
+      trigger: '#scrollSpace',
+      start: 'top top',
+      end: 'bottom bottom',
+      scrub: 1,
+      pin: '#pinTarget',
+      anticipatePin: 1
+    }
+  });
+
+  glide
+    // the invitation to swipe disappears the moment the story moves
+    .to(['#introLine', '#swipeIndicator'], { opacity: 0, y: -10, duration: 0.4, ease: 'power1.out' }, 0)
+
+    // parallax: distance = speed. Foreground rushes, background barely moves.
+    .to('#fieldBack',  { yPercent: -12, scale: 1.06, duration: 5 }, 0)
+    .to('#fieldMid',   { yPercent: -30, scale: 1.18, duration: 5 }, 0)
+    .to('#fieldFront', { yPercent: -68, scale: 1.9, filter: 'blur(10px) saturate(1.2) brightness(1.1)', duration: 5 }, 0)
+
+    // the sun grows warmer and closer as we move toward it
+    .to('#sunGlow', { scale: 1.5, opacity: 0.95, duration: 5 }, 0)
+
+    // petals catch the wind mid-journey, then settle
+    .fromTo('#petalsLayer', { opacity: 0 }, { opacity: 1, duration: 0.9 }, 1.6)
+    .to('#petalsLayer', { opacity: 0, duration: 0.7 }, 3.1)
+
+    // the vignette breathes in, framing the moment before the light takes over
+    .to('#vignette', { opacity: 0.15, duration: 1 }, 3.0)
+
+    // the world dissolves into light
+    .to('#fadeWhite', { opacity: 1, duration: 1.1, ease: 'power2.in' }, 3.6)
+    .fromTo('#endCaption', { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.8, ease: 'power2.out' }, 4.35);
+
+  /* ==========================================================================
+     CHAPTER TWO — THE RAIN
+  ========================================================================== */
+
+  // seed falling rain
+  (function seedRain(){
+    var layer = document.getElementById('rainLayer');
+    var count = reduceMotion ? 0 : 46;
+    for (var i = 0; i < count; i++){
+      var d = document.createElement('div');
+      d.className = 'raindrop';
+      d.style.left = (Math.random() * 100) + '%';
+      d.style.animationDuration = gsap.utils.random(0.55, 1.1) + 's';
+      d.style.animationDelay = gsap.utils.random(0, 1) + 's';
+      d.style.opacity = gsap.utils.random(0.35, 0.9);
+      layer.appendChild(d);
+    }
+  })();
+
+  // occasional soft lightning flicker, only while the storm is "live"
+  var lightningTicker = null;
+  function startLightning(){
+    if (reduceMotion || lightningTicker) return;
+    lightningTicker = gsap.delayedCall(gsap.utils.random(2.5, 5), function flash(){
+      gsap.timeline()
+        .to('#lightning', { opacity: .5, duration: .06 })
+        .to('#lightning', { opacity: 0, duration: .25 })
+        .to('#lightning', { opacity: .3, duration: .05 }, '+=0.08')
+        .to('#lightning', { opacity: 0, duration: .3 });
+      lightningTicker = gsap.delayedCall(gsap.utils.random(4, 8), flash);
+    });
+  }
+  function stopLightning(){
+    if (lightningTicker){ lightningTicker.kill(); lightningTicker = null; }
+    gsap.set('#lightning', { opacity: 0 });
+  }
+
+  // one scrubbed timeline: five lines surface one at a time as the camera
+  // holds in the rain, then the storm breaks into the date they chose
+  // each other.
+  var rainLines = ['#rt1', '#rt2', '#rt3', '#rt4', '#rt5'];
+  var rainTl = gsap.timeline({
+    scrollTrigger: {
+      trigger: '#scrollSpace2',
+      start: 'top top',
+      end: 'bottom bottom',
+      scrub: 1,
+      pin: '#pinTarget2',
+      anticipatePin: 1,
+      onEnter: startLightning,
+      onEnterBack: startLightning,
+      onLeave: stopLightning,
+      onLeaveBack: stopLightning
+    }
+  });
+
+  rainLines.forEach(function(sel, i){
+    var t = i * 1.0;
+    rainTl
+      .to(sel, { opacity: 1, y: 0, duration: .5, ease: 'power2.out' }, t)
+      .to(sel, { opacity: 0, y: -10, duration: .4, ease: 'power1.in' }, t + 0.72);
+  });
+
+  rainTl
+    .to('#rainLayer', { opacity: 0.25, duration: 1 }, rainLines.length - 0.6)
+    .to('#dawnWash', { opacity: 1, duration: 1.1, ease: 'power2.inOut' }, rainLines.length - 0.4)
+    .fromTo('#dateMark', { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: .9, ease: 'power2.out' }, rainLines.length + 0.15);
+
+  /* ==========================================================================
+     CHAPTER THREE — THE SKY
+  ========================================================================== */
+
+  (function seedSkyClouds(){
+    var layer = document.getElementById('skyClouds');
+    var defs = [
+      { w:140, h:40, top:'14%', dur:52 },
+      { w:100, h:30, top:'26%', dur:70 },
+      { w:170, h:46, top:'8%',  dur:60 },
+      { w:80,  h:24, top:'34%', dur:44 }
+    ];
+    defs.forEach(function(c, i){
+      var el = document.createElement('div');
+      el.className = 'sky-cloud';
+      el.style.width = c.w + 'px';
+      el.style.height = c.h + 'px';
+      el.style.top = c.top;
+      el.style.left = '-40%';
+      layer.appendChild(el);
+      gsap.to(el, { x: '180vw', duration: c.dur, ease: 'none', repeat: -1, delay: -i * 8 });
+    });
+  })();
+
+  gsap.set('#paperPlane', { top: '62%', left: '-10%', rotate: -6 });
+
+  var skyTl = gsap.timeline({
+    scrollTrigger: {
+      trigger: '#scrollSpace3',
+      start: 'top top',
+      end: 'bottom bottom',
+      scrub: 1,
+      pin: '#pinTarget3',
+      anticipatePin: 1
+    }
+  });
+
+  skyTl
+    .to('#sunrays', { opacity: 1, duration: 1.2 }, 0)
+    .to('#paperPlane', { opacity: 1, duration: .4 }, 0.15)
+    .to('#paperPlane', {
+      top: '18%', left: '78%', rotate: -18, scale: 1.15,
+      duration: 3, ease: 'power1.inOut'
+    }, 0.15)
+    .to('#st1', { opacity: 1, y: 0, duration: .6, ease: 'power2.out' }, 0.6)
+    .to('#st1', { opacity: 0, y: -10, duration: .5 }, 1.8)
+    .to('#st2', { opacity: 1, y: 0, duration: .6, ease: 'power2.out' }, 2.1)
+    .to('#paperPlane', { opacity: 0, duration: .5 }, 2.9)
+    .to('#st2', { opacity: 0, y: -10, duration: .5 }, 3.0);
+
+  /* ==========================================================================
+     CHAPTER FOUR — THE REVEAL
+     Not scrubbed — this is where the camera finally stops moving. The
+     emblem, the name, and one closing line arrive together, on rest.
+  ========================================================================== */
+  ScrollTrigger.create({
+    trigger: '#sceneFour',
+    start: 'top 70%',
+    once: true,
+    onEnter: function(){
+      gsap.timeline()
+        .to('#sceneFour .emblem', { opacity: 1, y: 0, scale: 1, duration: 1, ease: 'power2.out' })
+        .to('#wordmarkMain', { opacity: 1, y: 0, duration: 1, ease: 'power2.out' }, '-=0.5')
+        .to('#wordmarkSub', { opacity: .85, duration: .8, ease: 'power1.out' }, '-=0.4')
+        .to('#signatureLine', { opacity: 1, duration: 1, ease: 'power1.out' }, '-=0.2');
+    }
+  });
+
+  /*
+    FUTURE SCENE — this is the natural place to extend the story further:
+    append a new #pinTarget5 + #scrollSpace5 following the same
+    pin + spacer + scrub-timeline pattern used throughout this file.
+  */
+})();
+</script>
+</body>
+</html>
